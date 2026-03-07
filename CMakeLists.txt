@@ -53,6 +53,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/Dumper/Generator/Public/Managers
     ${CMAKE_SOURCE_DIR}/Dumper/Generator/Public/Wrappers
 
+    # Platform Public
+    ${CMAKE_SOURCE_DIR}/Dumper/Platform/Public
+
     # Utils
     ${CMAKE_SOURCE_DIR}/Dumper/Utils
     ${CMAKE_SOURCE_DIR}/Dumper/Utils/Compression

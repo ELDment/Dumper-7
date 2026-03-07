@@ -1,6 +1,7 @@
 
 #include <iostream>
 #include <string>
+#include <unordered_map>
 
 #include "Generators/MappingGenerator.h"
 #include "Managers/PackageManager.h"
@@ -8,6 +9,11 @@
 
 #include "../Settings.h"
 #include "Utils.h"
+
+namespace
+{
+	std::unordered_map<std::string, int32> GNameMap;
+}
 
 EMappingsTypeFlags MappingGenerator::GetMappingType(UEProperty Property)
 {
@@ -155,16 +161,14 @@ int32 MappingGenerator::AddNameToData(std::stringstream& NameTable, const std::s
 {
 	if constexpr (Settings::MappingGenerator::bShouldCheckForDuplicatedNames)
 	{
-		static std::unordered_map<std::string, int32> NameMap;
-		
-		auto [It, bInserted] = NameMap.insert({ Name, NameCounter });
+		auto [It, bInserted] = GNameMap.insert({ Name, static_cast<int32>(NameCounter) });
 
 		/* The name didn't occure yet, write it to the NameTable */
 		if (bInserted)
 		{
 			WriteToStream(NameTable, static_cast<uint16>(Name.length()));
 			NameTable.write(Name.c_str(), Name.length());
-			return NameCounter++;
+			return static_cast<int32>(NameCounter++);
 		}
 
 		return It->second;
@@ -173,7 +177,7 @@ int32 MappingGenerator::AddNameToData(std::stringstream& NameTable, const std::s
 	WriteToStream(NameTable, static_cast<uint16>(Name.length()));
 	NameTable.write(Name.c_str(), Name.length());
 
-	return NameCounter++;
+	return static_cast<int32>(NameCounter++);
 }
 
 void MappingGenerator::GeneratePropertyType(UEProperty Property, std::stringstream& Data, std::stringstream& NameTable)
@@ -305,10 +309,15 @@ void MappingGenerator::GenerateStruct(const StructWrapper& Struct, std::stringst
 
 void MappingGenerator::GenerateEnum(const EnumWrapper& Enum, std::stringstream& Data, std::stringstream& NameTable)
 {
-	const int32 EnumNameIndex = AddNameToData(NameTable, Enum.GetRawName());
+	const std::string EnumRawName = Enum.GetRawName();
+
+	const int32 EnumNameIndex = AddNameToData(NameTable, EnumRawName);
+
 	WriteToStream(Data, EnumNameIndex);
 
-	WriteToStream(Data, static_cast<uint16>(Enum.GetNumMembers()));
+	const uint16 NumMembers = static_cast<uint16>(Enum.GetNumMembers());
+
+	WriteToStream(Data, NumMembers);
 
 	for (EnumCollisionInfo Member : Enum.GetMembers())
 	{
@@ -455,6 +464,7 @@ void MappingGenerator::GenerateFileHeader(StreamType& InUsmap, const std::string
 
 void MappingGenerator::Generate()
 {
+	GNameMap.clear();
 	NameCounter = 0x0;
 
 	std::string MappingsFileName = (Settings::Generator::GameVersion + '-' + Settings::Generator::GameName + ".usmap");

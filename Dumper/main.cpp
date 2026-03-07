@@ -1,4 +1,5 @@
 #include <Windows.h>
+#include <process.h>
 #include <iostream>
 #include <chrono>
 #include <fstream>
@@ -18,8 +19,10 @@ enum class EFortToastType : uint8
         EFortToastType_MAX             = 3,
 };
 
-DWORD MainThread(HMODULE Module)
+unsigned __stdcall MainThread(void* ModuleHandle)
 {
+	HMODULE Module = static_cast<HMODULE>(ModuleHandle);
+
 	AllocConsole();
 	FILE* Dummy;
 	freopen_s(&Dummy, "CONOUT$", "w", stderr);
@@ -94,7 +97,10 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
 	switch (reason)
 	{
 	case DLL_PROCESS_ATTACH:
-		CreateThread(0, 0, (LPTHREAD_START_ROUTINE)MainThread, hModule, 0, 0);
+		if (uintptr_t ThreadHandle = _beginthreadex(nullptr, 0, &MainThread, hModule, 0, nullptr))
+		{
+			CloseHandle(reinterpret_cast<HANDLE>(ThreadHandle));
+		}
 		break;
 	}
 
